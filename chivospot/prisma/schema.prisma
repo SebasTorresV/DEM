@@ -1,0 +1,122 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        Int       @id @default(autoincrement())
+  name      String?
+  email     String    @unique
+  password  String
+  role      Role      @default(user)
+  createdAt DateTime  @default(now())
+  organizer Organizer?
+  favorites Favorite[]
+  reminders Reminder[]
+}
+
+model Organizer {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @unique
+  displayName String
+  website     String?
+  verified    Boolean  @default(false)
+  user        User     @relation(fields: [userId], references: [id])
+  events      Event[]
+}
+
+model Venue {
+  id           Int      @id @default(autoincrement())
+  name         String
+  address      String?
+  latitude     Float
+  longitude    Float
+  municipality String
+  events       Event[]
+}
+
+model Category {
+  id    Int    @id @default(autoincrement())
+  slug  String @unique
+  name  String
+  events EventCategory[]
+}
+
+model Event {
+  id          Int            @id @default(autoincrement())
+  slug        String         @unique
+  title       String
+  summary     String?
+  description String?
+  imageUrl    String?
+  startTime   DateTime
+  endTime     DateTime?
+  priceMin    Float?
+  priceMax    Float?
+  currency    String         @default("USD")
+  status      EventStatus    @default(pending)
+  venueId     Int
+  organizerId Int
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  venue       Venue          @relation(fields: [venueId], references: [id])
+  organizer   Organizer      @relation(fields: [organizerId], references: [id])
+  categories  EventCategory[]
+  favorites   Favorite[]
+  reminders   Reminder[]
+  metrics     EventMetric?
+}
+
+model EventCategory {
+  eventId    Int
+  categoryId Int
+  event      Event    @relation(fields: [eventId], references: [id])
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  @@id([eventId, categoryId])
+}
+
+model Favorite {
+  userId    Int
+  eventId   Int
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  event     Event    @relation(fields: [eventId], references: [id])
+
+  @@id([userId, eventId])
+}
+
+model Reminder {
+  id       Int      @id @default(autoincrement())
+  userId   Int
+  eventId  Int
+  remindAt DateTime
+  channel  String   @default("local")
+  user     User     @relation(fields: [userId], references: [id])
+  event    Event    @relation(fields: [eventId], references: [id])
+}
+
+model EventMetric {
+  eventId   Int    @id
+  views     Int    @default(0)
+  clicksMap Int    @default(0)
+  saves     Int    @default(0)
+  event     Event @relation(fields: [eventId], references: [id])
+}
+
+enum Role {
+  user
+  organizer
+  admin
+}
+
+enum EventStatus {
+  pending
+  approved
+  published
+  archived
+}
